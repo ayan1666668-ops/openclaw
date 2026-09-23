@@ -59,6 +59,7 @@ import {
   toAgentStoreSessionKey,
 } from "../routing/session-key.js";
 import { createLazyRuntimeModule } from "../shared/lazy-runtime.js";
+import { drainOpenClawAgentWriteAdmission } from "../state/openclaw-agent-write-admission.js";
 import {
   resetTaskFlowRegistryForTests,
   resetTaskRegistryForTests,
@@ -484,6 +485,7 @@ async function cleanupGatewayTestHome(options: { restoreEnv: boolean }) {
   vi.useRealTimers();
   // Direct handler projections outlive replies and must release reads before registry closure.
   await disposeSessionReadContexts();
+  await drainOpenClawAgentWriteAdmission();
   resetGatewayLifecycleTestState({ preserveRuntimeBindings: false });
   resetLogger();
   resetTaskRegistryForTests({ persist: false });

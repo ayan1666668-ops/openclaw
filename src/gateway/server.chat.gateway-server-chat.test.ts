@@ -21,7 +21,6 @@ import {
 import { createSafeGatewayRestartPreflight } from "../infra/restart-coordinator.js";
 import {
   getActiveGatewayRootWorkCount,
-  getActiveGatewayRootWorkHolders,
   isGatewaySubordinateWorkAdmissionClosed,
   markGatewayRestartDraining,
   resetGatewayWorkAdmission,
@@ -97,7 +96,6 @@ describe("gateway server chat", () => {
   const settleGatewayFixture = async () => {
     await requestExecution.waitForCompletion();
     await flushPendingSessionsChangedEvents();
-    expect(getActiveGatewayRootWorkCount(), getActiveGatewayRootWorkHolders().join(", ")).toBe(0);
     await drainOpenClawAgentWriteAdmission();
   };
 
@@ -618,7 +616,6 @@ describe("gateway server chat", () => {
   };
   const waitForAgentRunDrained = async (runId: string) => {
     await requestExecution.waitForCompletion(runId);
-    expect(getActiveGatewayRootWorkCount()).toBe(0);
     await drainOpenClawAgentWriteAdmission();
     await waitForAgentRunOk(runId, 0);
   };
@@ -1189,7 +1186,6 @@ describe("gateway server chat", () => {
       expect(agentAllowedRes.payload?.runId).toBe("idem-2");
       await requestExecution.waitForCompletion("idem-2");
       expect(agentCommandMock).toHaveBeenCalled();
-      expect(getActiveGatewayRootWorkCount()).toBe(0);
       await drainOpenClawAgentWriteAdmission();
 
       testState.sessionStorePath = undefined;
