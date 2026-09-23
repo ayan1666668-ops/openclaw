@@ -22,7 +22,11 @@ export const SQLITE_SESSION_WRITER_QUEUES = admission.queues;
 /** Joins accepted writes without cancelling them; callers must first settle write producers. */
 export async function drainOpenClawAgentWriteAdmission(): Promise<void> {
   while (admission.queues.size > 0) {
-    await Promise.all([...admission.queues.values()].map((queue) => queue.drainPromise));
+    await Promise.all(
+      [...admission.queues.values()].flatMap((queue) =>
+        queue.drainPromise ? [queue.drainPromise] : [],
+      ),
+    );
   }
 }
 
