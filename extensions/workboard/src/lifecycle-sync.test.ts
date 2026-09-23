@@ -66,6 +66,13 @@ async function runSessionSweep(params: {
   }
 }
 
+function createAutomationNudgeContext(
+  run: ReturnType<typeof vi.fn>,
+  logger: { info: ReturnType<typeof vi.fn>; warn: ReturnType<typeof vi.fn> },
+) {
+  return { logger, getCron: () => ({ run }) } as never;
+}
+
 describe("Workboard gateway lifecycle sync", () => {
   it("nudges the attached board automation when a matching subagent ends", async () => {
     const store = createWorkboardSqliteTestStore();
@@ -73,9 +80,9 @@ describe("Workboard gateway lifecycle sync", () => {
     const sessionKey = "agent:main:subagent:workboard-planning-card-1";
     const card = await createLinkedCard(store, { boardId: "planning", sessionKey });
     const request = vi.fn().mockResolvedValue({ ok: true, ran: true });
-    const service = createWorkboardAutomationNudgeService({ store, gateway: { request } });
+    const service = createWorkboardAutomationNudgeService({ store });
     const info = vi.fn();
-    const context = { logger: { info, warn: vi.fn() } } as never;
+    const context = createAutomationNudgeContext(request, { info, warn: vi.fn() });
     await service.start(context);
 
     await syncWorkboardSubagentEnded({
@@ -85,11 +92,7 @@ describe("Workboard gateway lifecycle sync", () => {
     });
     await service.stop?.(context);
 
-    expect(request).toHaveBeenCalledWith(
-      "cron.run",
-      { id: "job-categorize-planning", mode: "if-enabled" },
-      { scopes: ["operator.admin"] },
-    );
+    expect(request).toHaveBeenCalledWith("job-categorize-planning", "if-enabled");
     expect(info).toHaveBeenCalledWith(
       "workboard automation nudge requested for board planning: job job-categorize-planning",
     );
@@ -101,16 +104,13 @@ describe("Workboard gateway lifecycle sync", () => {
     const sessionKey = "agent:main:subagent:workboard-planning-card-generation";
     const card = await createLinkedCard(store, { boardId: "planning", sessionKey });
     const activeRequest = vi.fn();
-    const activeService = createWorkboardAutomationNudgeService({
-      store,
-      gateway: { request: activeRequest },
-    });
+    const activeService = createWorkboardAutomationNudgeService({ store });
     const generationRequest = vi.fn().mockResolvedValue({ ok: true, ran: true });
-    const generationService = createWorkboardAutomationNudgeService({
-      store,
-      gateway: { request: generationRequest },
+    const generationService = createWorkboardAutomationNudgeService({ store });
+    const context = createAutomationNudgeContext(activeRequest, {
+      info: vi.fn(),
+      warn: vi.fn(),
     });
-    const context = { logger: { info: vi.fn(), warn: vi.fn() } } as never;
     await activeService.start(context);
 
     await syncWorkboardSubagentEnded({
@@ -120,12 +120,8 @@ describe("Workboard gateway lifecycle sync", () => {
     });
     await activeService.stop?.(context);
 
-    expect(activeRequest).not.toHaveBeenCalled();
-    expect(generationRequest).toHaveBeenCalledWith(
-      "cron.run",
-      { id: "job-categorize-planning", mode: "if-enabled" },
-      { scopes: ["operator.admin"] },
-    );
+    expect(activeRequest).toHaveBeenCalledWith("job-categorize-planning", "if-enabled");
+    expect(generationRequest).not.toHaveBeenCalled();
   });
 
   it("does not nudge a matching card whose board has no automation", async () => {
@@ -134,8 +130,8 @@ describe("Workboard gateway lifecycle sync", () => {
     const sessionKey = "agent:main:subagent:workboard-planning-card-2";
     const card = await createLinkedCard(store, { boardId: "planning", sessionKey });
     const request = vi.fn();
-    const service = createWorkboardAutomationNudgeService({ store, gateway: { request } });
-    const context = { logger: { info: vi.fn(), warn: vi.fn() } } as never;
+    const service = createWorkboardAutomationNudgeService({ store });
+    const context = createAutomationNudgeContext(request, { info: vi.fn(), warn: vi.fn() });
     await service.start(context);
 
     await syncWorkboardSubagentEnded({
@@ -155,8 +151,8 @@ describe("Workboard gateway lifecycle sync", () => {
       await store.upsertBoard({ id: "planning", automationJobId: "job-categorize-planning" });
       const card = await createLinkedCard(store, { boardId: "planning", sessionKey });
       const request = vi.fn();
-      const service = createWorkboardAutomationNudgeService({ store, gateway: { request } });
-      const context = { logger: { info: vi.fn(), warn: vi.fn() } } as never;
+      const service = createWorkboardAutomationNudgeService({ store });
+      const context = createAutomationNudgeContext(request, { info: vi.fn(), warn: vi.fn() });
       await service.start(context);
 
       await syncWorkboardSubagentEnded({
@@ -180,8 +176,8 @@ describe("Workboard gateway lifecycle sync", () => {
       resolveRun = resolve;
     });
     const request = vi.fn().mockReturnValue(run);
-    const service = createWorkboardAutomationNudgeService({ store, gateway: { request } });
-    const context = { logger: { info: vi.fn(), warn: vi.fn() } } as never;
+    const service = createWorkboardAutomationNudgeService({ store });
+    const context = createAutomationNudgeContext(request, { info: vi.fn(), warn: vi.fn() });
     await service.start(context);
     const event = {
       targetSessionKey: sessionKey,
@@ -207,8 +203,8 @@ describe("Workboard gateway lifecycle sync", () => {
     const card = await createLinkedCard(store, { boardId: "planning", sessionKey });
     const request = vi.fn().mockRejectedValue(new Error("gateway unavailable"));
     const warn = vi.fn();
-    const service = createWorkboardAutomationNudgeService({ store, gateway: { request } });
-    const context = { logger: { info: vi.fn(), warn } } as never;
+    const service = createWorkboardAutomationNudgeService({ store });
+    const context = createAutomationNudgeContext(request, { info: vi.fn(), warn });
     await service.start(context);
 
     await expect(
@@ -231,8 +227,8 @@ describe("Workboard gateway lifecycle sync", () => {
     const card = await createLinkedCard(store, { boardId: "planning", sessionKey });
     const request = vi.fn().mockResolvedValue({ ok: true, ran: false, reason: "disabled" });
     const warn = vi.fn();
-    const service = createWorkboardAutomationNudgeService({ store, gateway: { request } });
-    const context = { logger: { info: vi.fn(), warn } } as never;
+    const service = createWorkboardAutomationNudgeService({ store });
+    const context = createAutomationNudgeContext(request, { info: vi.fn(), warn });
     await service.start(context);
 
     await expect(

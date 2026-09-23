@@ -166,6 +166,10 @@ export type PluginHookGatewayCronService = {
   add: (input: PluginHookGatewayCronCreateInput) => Promise<unknown>;
   update: (id: string, patch: PluginHookGatewayCronUpdateInput) => Promise<unknown>;
   remove: (id: string) => Promise<PluginHookGatewayCronRemoveResult>;
+  run: (
+    id: string,
+    mode?: "due" | "force" | "if-enabled",
+  ) => Promise<{ ok: boolean; ran?: boolean; reason?: string; runId?: string }>;
   removeStaleJobFamily: (family: {
     declarationKey: string;
     name: string;

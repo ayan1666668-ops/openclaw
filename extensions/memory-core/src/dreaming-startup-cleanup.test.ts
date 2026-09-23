@@ -76,6 +76,7 @@ function createGateway(
     add: vi.fn(async () => ({})),
     update: vi.fn(async () => ({})),
     remove: vi.fn(async () => ({ removed: false })),
+    run: vi.fn(async () => ({ ok: true, ran: false, reason: "disabled" as const })),
     removeStaleJobFamily: vi.fn(async () => 0),
   };
   const api = createTestPluginApi({
