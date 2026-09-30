@@ -45,6 +45,7 @@ import type { CronJobsSortBy, CronSortDir } from "./list-page-types.js";
 import type {
   CronNotificationIntent,
   CronNotificationJob,
+  CronNotificationRouting,
   ResolvedFailureAlert,
 } from "./notification-intents.js";
 
@@ -248,6 +249,7 @@ export type CronServiceDeps = {
   }) => void | Promise<void>;
   sendCronFailureAlert?: (params: {
     job: CronNotificationJob;
+    routing: CronNotificationRouting;
     payload: ReplyPayload;
     runAtMs?: number;
     channel: CronMessageChannel;
@@ -457,7 +459,7 @@ export type CronAddOptions = {
   toolsAllowProvenance?: CronToolsAllowProvenance;
   /** Restrict-only exec pin from the signed creator-turn identity. */
   toolsAllowExecTarget?: CronToolsAllowExecTarget;
-  /** Synchronous Gateway-owned liveness guard consumed immediately before mutation. */
+  /** Synchronous Gateway-owned liveness check repeated at mutation admission and commit. */
   commitGuard?: () => void;
   /** One-use fresh capture; callback presence means fresh even when it returns undefined. */
   captureRuntimeAuthority?: () => CronRuntimeAuthority | undefined;
@@ -473,7 +475,7 @@ export type CronUpdateOptions = Pick<
 };
 
 export type CronCommitGuardOptions = {
-  /** Synchronous Gateway-owned guard consumed at the mutation owner. */
+  /** Synchronous Gateway-owned liveness check repeated at mutation admission and commit. */
   commitGuard?: () => void;
 };
 /** Cron-store-locked guard evaluated against the current job before an update applies. */
